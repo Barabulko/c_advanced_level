@@ -7,7 +7,8 @@
 #define MAX_X 15
 #define MAX_Y 15
 
-int dx = 1, dy = 0; // направление движения змейки (по умолчанию вправо)
+int isPaused = 0;
+int score = 0;
 
 typedef struct tail_t{
 	int x;
@@ -17,35 +18,50 @@ typedef struct tail_t{
 typedef struct snake_t{
 	int x;
 	int y;
+	int dx;
+	int dy;
 	struct tail_t * tail;
 	size_t tsize;
 	}  snake_t;
-// --> x
-// || Y
-// \/
-// @**
+
+typedef struct fruit_t{
+	int x;
+	int y;
+	} fruit_t;
+
 struct snake_t initSnake(int x, int y, size_t tsize){
 	struct snake_t snake;
 	snake.x = x;
 	snake.y = y;
+	snake.dx = 1;
+	snake.dy = 0;
 	snake.tsize = tsize;
 	snake.tail = (tail_t *) malloc (sizeof(tail_t) * 100);
 	for (int i =0; i < tsize; ++i){
-		snake.tail[i].x = x + i +1;
+		snake.tail[i].x = x + i + 1;
 		snake.tail[i].y = y;
 		}
 	return snake;
 }
 
+struct fruit_t initFruit(){
+	struct fruit_t fruit;
+	fruit.x = rand() % MAX_X;
+	fruit.y = rand() % MAX_Y;
+	return fruit;
+}
+
 	
 // @**
-void printSnake(struct snake_t snake){
+void printField(struct snake_t snake, struct fruit_t fruit){
 		char matrix[MAX_X][MAX_Y];
 		for (int i = 0; i < MAX_X; ++i){
 			for (int j = 0; j < MAX_Y; ++j)
 			{
 				matrix[i][j] = ' ';
 				}}
+		
+		matrix[fruit.x][fruit.y] = 'O';
 		
 		matrix[snake.x][snake.y] = '@';
 		for (int i = 0; i < snake.tsize; ++i){
@@ -59,23 +75,18 @@ void printSnake(struct snake_t snake){
 				}
 				printf("\n");
 				}
+		printf("Score: %d\n", score);
 	}
 	
-// <--  @** tsize = 2
-//     @**
-
-//  @**      @***
-//    * <--     *
-//  ***        **
-snake_t moveLeft(snake_t snake){
+snake_t move(snake_t snake){
 	for (int i = snake.tsize - 1; i > 0; i--){
 		snake.tail[i] = snake.tail[i-1];
 		}
 	snake.tail[0].x = snake.x;
 	snake.tail[0].y = snake.y;
 	
-	snake.x += dx;
-	snake.y += dy;
+	snake.x += snake.dx;
+	snake.y += snake.dy;
 
 	if (snake.x >= MAX_X)
         	snake.x = 0;
@@ -93,46 +104,64 @@ snake_t moveLeft(snake_t snake){
 	return snake;
 	}
 
-void input() //дз №2.2
+void logic(snake_t *snake, fruit_t *fruit) {
+	if ((snake->x==fruit->x) && (snake->y == fruit->y))
+	{
+		fruit->x = rand() % MAX_X;
+		fruit->y = rand() % MAX_Y;
+		snake->tsize=snake->tsize+1;
+		score=score+1;
+	}
+}
+
+void input(snake_t *snake) //дз №2.2
 {
     if (_kbhit())
     {
         switch (_getch())
         {
         case 'a':
-	    if(dx==0) 
-                dx = -1; //учитываем требование дз №2.1
-            dy = 0;
+	    if(snake->dx==0) 
+                snake->dx = -1; //учитываем требование дз №2.1
+            snake->dy = 0;
             break;
         case 'd':
-            if(dx==0) 
-                dx = 1;
-            dy = 0;
+            if(snake->dx==0) 
+                snake->dx = 1;
+            snake->dy = 0;
             break;
         case 'w':
-            dx = 0;
-            if(dy==0) 
-                dy = -1;
+            snake->dx = 0;
+            if(snake->dy==0) 
+                snake->dy = -1;
             break;
         case 's':
-            dx = 0;
-            if(dy==0) 
-                dy = 1;
+            snake->dx = 0;
+            if(snake->dy==0) 
+                snake->dy = 1;
             break;
+	case 'p': //Задание 3.3 - пауза
+	    isPaused = !isPaused;
+	    break;
         }
     }
 }	
 	
 int main(){
 	struct snake_t snake = initSnake( 10, 5, 6);
-	printSnake(snake);
-	while(1)//for( int i = 0; i < 8; ++i)
-	{
-		input();
-		snake = moveLeft(snake);
-		Sleep(100);
-		system("cls");
-		printSnake(snake);
+	struct fruit_t fruit = initFruit();
+	printField(snake, fruit);
+	while(1)
+	{	
+		if (score<20) {Sleep(200-score*10);} else {Sleep(10);} //Задание 3.2 - увеличение скорости
+		input(&snake);
+		if(!isPaused)
+		{
+			logic(&snake, &fruit); //Задание 3.1 - фрукты и счетчик
+			snake = move(snake);
+			system("cls");
+			printField(snake, fruit);
+		}
 	}
 	return 0;
 	}
